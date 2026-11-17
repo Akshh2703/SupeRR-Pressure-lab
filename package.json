@@ -1,0 +1,21 @@
+{
+  "name": "superr-pressure-lab",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "SupeRR Pressure Lab — Rajasthan Royals Decision Intelligence",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "node --check server.js",
+    "start": "node server.js",
+    "lint": "node --check server.js",
+    "test": "npx --yes tsx --test src/pressureLogic.test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.3.0",
+    "tsx": "^4.23.15"
+  }
+}
