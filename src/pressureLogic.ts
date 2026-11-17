@@ -7,6 +7,19 @@ export interface ScenarioInput {
   phase: 'Death' | 'Middle' | 'Powerplay';
 }
 
+export type ConvergenceState = 'Aligned' | 'Partly aligned' | 'In tension';
+
+export interface PlayerReading {
+  archetype: string;
+  motif: string;
+  confidence: string;
+  convergence: ConvergenceState;
+  convergenceLeftPct: number;
+  convergenceRightPct: number;
+  conflictNote: string;
+  mindChange: string;
+}
+
 export interface RecommendationResult {
   name: string;
   fit: number;
@@ -15,10 +28,89 @@ export interface RecommendationResult {
   why: string;
   chips: string[];
   stateText: string;
+  guardNote: string;
+  reading: PlayerReading;
+}
+
+export const INTERPRETATION_REGISTER: Record<string, PlayerReading> = {
+  'Rinku Singh': {
+    archetype: 'The Compensator',
+    motif: 'Carries the death overs as if repaying an old debt — the burden is where he feels most himself.',
+    confidence: 'Reading confidence: LOW — narrative inference, not measurement.',
+    convergence: 'Aligned',
+    convergenceLeftPct: 50,
+    convergenceRightPct: 50,
+    conflictNote: 'Both lenses converge in steep chases (+0.301 chase lift), though defending states (−0.088) break the debt-repayment pattern.',
+    mindChange: 'A multi-season drop in high-RRR boundary percentage or a shift to first-innings setting where the deficit cue disappears.',
+  },
+  'Tristan Stubbs': {
+    archetype: 'The Unburdened',
+    motif: 'No scar tissue yet; freedom under pressure, but untested when failure repeats.',
+    confidence: 'Reading confidence: LOW — narrative inference, not measurement.',
+    convergence: 'Partly aligned',
+    convergenceLeftPct: 58,
+    convergenceRightPct: 42,
+    conflictNote: 'Numbers show elite chase lift (+0.317), while the interpretive lens flags shorter multi-season exposure to repeated collapse.',
+    mindChange: 'Sustained positive lift across two more high-pressure tournament cycles after early-innings top-order collapses.',
+  },
+  'Jamie Overton': {
+    archetype: 'The Enforcer',
+    motif: 'Aggression as armour — control through confrontation rather than containment.',
+    confidence: 'Reading confidence: LOW — narrative inference, not measurement.',
+    convergence: 'Partly aligned',
+    convergenceLeftPct: 56,
+    convergenceRightPct: 44,
+    conflictNote: 'Death-phase lift (+0.441) is elite, but medium sample depth means hard-length confrontation can leak runs on flat surfaces.',
+    mindChange: 'Two consecutive death spells where batters successfully target his hard-length armour on low-bounce wickets.',
+  },
+  'Ayush Badoni': {
+    archetype: 'The Chaos-Native',
+    motif: 'Settles when the situation is least settled; comfort found in extremity.',
+    confidence: 'Reading confidence: LOW — narrative inference, not measurement.',
+    convergence: 'Aligned',
+    convergenceLeftPct: 50,
+    convergenceRightPct: 50,
+    conflictNote: 'Top overall reliability (86.6) and extreme-band lift (+0.290) align directly with his calm response in broken middle-to-death states.',
+    mindChange: 'Evidence of strike-rate stagnation when entering before the 60–70 pressure threshold is reached.',
+  },
+  'Mustafizur Rahman': {
+    archetype: 'The Contained',
+    motif: 'Emotion held deliberately flat; pressure absorbed rather than expressed.',
+    confidence: 'Reading confidence: LOW — narrative inference, not measurement.',
+    convergence: 'Aligned',
+    convergenceLeftPct: 50,
+    convergenceRightPct: 50,
+    conflictNote: 'Strong defending (+0.356) and death (+0.367) lift match his repeatable, low-variance cutter execution under scoreboard squeeze.',
+    mindChange: 'Dew-heavy conditions or flat tracks that neutralise off-pace grip and force pace-on adjustments.',
+  },
+};
+
+export function sanitizeNumber(val: unknown): { value: number; clamped: boolean } {
+  const num = typeof val === 'number' ? val : Number(val);
+  if (!Number.isFinite(num) || num < 0) {
+    return { value: 0, clamped: true };
+  }
+  return { value: num, clamped: false };
 }
 
 export function evaluatePressureScenario(input: ScenarioInput): RecommendationResult {
-  const { target: t, score: s, balls: b, wickets: w, situation: si, phase: ph } = input;
+  const tSan = sanitizeNumber(input.target);
+  const sSan = sanitizeNumber(input.score);
+  const bSan = sanitizeNumber(input.balls);
+  const wSan = sanitizeNumber(input.wickets);
+
+  const t = tSan.value;
+  const s = sSan.value;
+  const b = bSan.value;
+  const w = Math.min(wSan.value, 10);
+  const si = input.situation === 'Defending' ? 'Defending' : 'Chasing';
+  const ph = input.phase === 'Middle' || input.phase === 'Powerplay' ? input.phase : 'Death';
+
+  const hadNonFinite = tSan.clamped || sSan.clamped || bSan.clamped || wSan.clamped;
+  const guardNote = hadNonFinite
+    ? 'Non-finite or negative input was clamped to 0 to keep the pressure calculation valid.'
+    : '';
+
   const need = Math.max(t - s, 0);
   const rr = (need / Math.max(b, 1)) * 6;
 
@@ -66,5 +158,7 @@ export function evaluatePressureScenario(input: ScenarioInput): RecommendationRe
       ? `${need} required · ${b} balls · ${rr.toFixed(1)} RRR`
       : `Defending · ${b} balls · ${w} wickets left`;
 
-  return { name, fit, fitLabel, role, why, chips, stateText };
+  const reading = INTERPRETATION_REGISTER[name] || INTERPRETATION_REGISTER['Rinku Singh'];
+
+  return { name, fit, fitLabel, role, why, chips, stateText, guardNote, reading };
 }

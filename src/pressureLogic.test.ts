@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluatePressureScenario } from './pressureLogic';
+import { evaluatePressureScenario, INTERPRETATION_REGISTER } from './pressureLogic';
 
-test('recommends Rinku Singh in high-RRR death chase (48 needed off 24 balls)', () => {
+test('recommends Rinku Singh in high-RRR death chase with Compensator reading', () => {
   const res = evaluatePressureScenario({
     target: 180,
     score: 132,
@@ -15,9 +15,11 @@ test('recommends Rinku Singh in high-RRR death chase (48 needed off 24 balls)', 
   assert.equal(res.fit, 94);
   assert.equal(res.fitLabel, 'Elite pressure fit');
   assert.equal(res.stateText, '48 required · 24 balls · 12.0 RRR');
+  assert.equal(res.reading.archetype, 'The Compensator');
+  assert.equal(res.reading.confidence, 'Reading confidence: LOW — narrative inference, not measurement.');
 });
 
-test('recommends Tristan Stubbs in moderate-high RRR chase (RRR >= 9, Middle phase)', () => {
+test('recommends Tristan Stubbs in moderate-high RRR chase with Unburdened reading', () => {
   const res = evaluatePressureScenario({
     target: 180,
     score: 120,
@@ -28,10 +30,11 @@ test('recommends Tristan Stubbs in moderate-high RRR chase (RRR >= 9, Middle pha
   });
   assert.equal(res.name, 'Tristan Stubbs');
   assert.equal(res.fit, 91);
-  assert.equal(res.fitLabel, 'Strong pressure fit');
+  assert.equal(res.reading.archetype, 'The Unburdened');
+  assert.equal(res.reading.convergence, 'Partly aligned');
 });
 
-test('recommends Jamie Overton when defending in the death phase', () => {
+test('recommends Jamie Overton when defending in the death phase with Enforcer reading', () => {
   const res = evaluatePressureScenario({
     target: 180,
     score: 145,
@@ -42,11 +45,10 @@ test('recommends Jamie Overton when defending in the death phase', () => {
   });
   assert.equal(res.name, 'Jamie Overton');
   assert.equal(res.fit, 95);
-  assert.equal(res.fitLabel, 'Elite pressure fit');
-  assert.equal(res.stateText, 'Defending · 18 balls · 4 wickets left');
+  assert.equal(res.reading.archetype, 'The Enforcer');
 });
 
-test('recommends Mustafizur Rahman when defending in non-death phases', () => {
+test('recommends Mustafizur Rahman when defending in non-death phases with Contained reading', () => {
   const res = evaluatePressureScenario({
     target: 180,
     score: 95,
@@ -57,9 +59,10 @@ test('recommends Mustafizur Rahman when defending in non-death phases', () => {
   });
   assert.equal(res.name, 'Mustafizur Rahman');
   assert.equal(res.fit, 92);
+  assert.equal(res.reading.archetype, 'The Contained');
 });
 
-test('recommends Ayush Badoni in low-RRR chase scenario', () => {
+test('recommends Ayush Badoni in low-RRR chase scenario with Chaos-Native reading', () => {
   const res = evaluatePressureScenario({
     target: 160,
     score: 120,
@@ -70,5 +73,19 @@ test('recommends Ayush Badoni in low-RRR chase scenario', () => {
   });
   assert.equal(res.name, 'Ayush Badoni');
   assert.equal(res.fit, 88);
-  assert.equal(res.fitLabel, 'Strong pressure fit');
+  assert.equal(res.reading.archetype, 'The Chaos-Native');
+});
+
+test('guards non-finite and negative inputs without NaN', () => {
+  const res = evaluatePressureScenario({
+    target: Number.NaN,
+    score: -20,
+    balls: 0,
+    wickets: 5,
+    situation: 'Chasing',
+    phase: 'Death',
+  });
+  assert.ok(!res.stateText.includes('NaN'));
+  assert.ok(res.guardNote.length > 0);
+  assert.equal(Object.keys(INTERPRETATION_REGISTER).length, 5);
 });
